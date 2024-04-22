@@ -53,6 +53,10 @@ class Kernel(ABC):
         """
         return self.gradientX(y, x)
 
+    @abstractmethod
+    def multiDerivative(self, x, y, alpha:list[int]):
+        # Use JAX here to implement this function, or do it analytically
+        raise NotImplementedError("multiDerivative not implemented")
 
 class Linear(Kernel):
     def __call__(self, x, y):
