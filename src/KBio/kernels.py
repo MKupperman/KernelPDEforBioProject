@@ -113,8 +113,8 @@ class Gaussian(Kernel):
         K = np.zeros((n,n))
         for i in range(n):
             for j in range(i, n):
-            K[i,j] = self(X[i], X[j])
-            K[j,i] = K[i,j]
+                K[i,j] = self(X[i], X[j])
+                K[j,i] = K[i,j]
         return K
 
 class Exponential(Kernel):
