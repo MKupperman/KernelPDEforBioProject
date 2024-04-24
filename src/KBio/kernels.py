@@ -177,3 +177,36 @@ class Exponential(Kernel):
     def multiDerivative(self, x, y, alpha: list[int]):
 
         raise NotImplementedError("multiDerivative not implemented")
+
+class featureMapKernel(Kernel):
+    # A kernel can be defined by a feature map and a set of weights.
+    # Use this to define a kernel function.
+
+    # Implementation by Copilot - check if it is correct
+    def __init__(self, feature_map, weights, alpha_deriv_formula):
+        self.feature_map = feature_map
+        self.weights = weights
+        self.alpha_deriv_formula = alpha_deriv_formula
+
+    def __call__(self, x, y):
+        return np.dot(self.feature_map(x), self.feature_map(y))
+
+    def __str__(self):
+        return 'Feature Map Kernel'
+
+    def gradientX(self, x, y):
+        return self.feature_map(y)
+
+    def matrix(self, X):
+        n = len(X)
+        K = np.zeros((n,n))
+        for i in range(n):
+            for j in range(i, n):
+                K[i,j] = self(X[i], X[j])
+                K[j,i] = K[i,j]
+        return K
+
+    def multiDerivative(self, x, y, alpha: list[int]):
+        # Use alpha_deriv_formula to compute the alpha-partial derivative of the kernel function w.r.t x.
+
+        raise NotImplementedError("multiDerivative not implemented")
