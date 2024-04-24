@@ -65,7 +65,7 @@ def learn_DE_form(kernel:Kernel, s_features:np.ndarray, f_labels:np.ndarray, nug
 
 
 def kernelized_DE_fit(kernel:Kernel, DE_operator:function, u_data:np.ndarray,
-                      f_data:np.ndarray, nugget_f:float, nugget_boundary:float):
+                      f_data:np.ndarray, nugget_f:float, nugget_boundary:float) -> np.ndarray:
     """    Fit a kernelized operator to the data.
 
     Use the kernel method to fit an operator to the data. Return a function
@@ -80,6 +80,9 @@ def kernelized_DE_fit(kernel:Kernel, DE_operator:function, u_data:np.ndarray,
         f_data (np.ndarray): _description_
         nugget_f (float): _description_
         nugget_boundary (float): _description_
+
+    Returns:
+        np.ndarray: Solution weights for the kernelized operator.
     """
 
     raise NotImplementedError("kernelized_DE_fit not implemented")
