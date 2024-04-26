@@ -215,5 +215,14 @@ class featureMapKernel(Kernel):
 
     def multiDerivative(self, x, y, alpha: list[int]):
         # Use alpha_deriv_formula to compute the alpha-partial derivative of the kernel function w.r.t x.
-
-        raise NotImplementedError("multiDerivative not implemented")
+        if sum(alpha) == 1:  # First-order derivative
+            # Assuming alpha corresponds to the order of derivative w.r.t. each component.
+            result = self.degree * (np.dot(x, y) + 1) ** (self.degree - 1)
+            # Multiply by the derivative of the inner product w.r.t. the respective component.
+            grad = []
+            for i, a in enumerate(alpha):
+                if a == 1:
+                    grad.append(y[i] if i < len(y) else 0)
+            return result * np.array(grad)
+        else:
+            raise NotImplementedError("Higher or zero order derivatives are not implemented")
