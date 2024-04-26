@@ -131,21 +131,28 @@ class Gaussian(Kernel):
         raise NotImplementedError("feature_map not implemented")
 
     def gradientX(self, x, y):
-        return -self(x, y) * (x - y) / self.sigma ** 2
+        factor = -1 / self.sigma ** 2
+        return factor * (x - y) * self.__call__(x, y)
 
     def matrix(self, X):
         n = len(X)
-        # Find a way to vectorize this - this is a naive implementation
-        K = np.zeros((n,n))
+        K = np.zeros((n, n))
         for i in range(n):
             for j in range(i, n):
-                K[i,j] = self(X[i], X[j])
-                K[j,i] = K[i,j]
+                K[i, j] = self.__call__(X[i], X[j])
+                K[j, i] = K[i, j]
         return K
 
     def multiDerivative(self, x, y, alpha: list[int]):
-
-        raise NotImplementedError("multiDerivative not implemented")
+        Kxy = self.__call__(x, y)
+        if len(alpha) == 1 and alpha[0] == 1:
+            return self.gradientX(x, y)
+        elif len(alpha) == 2 and all(a == 1 for a in alpha):
+            factor = 1 / self.sigma ** 4
+            term1 = self.sigma ** 2 - np.sum((x - y) ** 2)
+            return factor * (x - y) ** 2 * Kxy + term1 * Kxy / self.sigma ** 2
+        else:
+            raise NotImplementedError("Higher order derivatives are not implemented")
 
 
 class Exponential(Kernel):

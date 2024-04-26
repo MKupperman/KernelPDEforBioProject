@@ -24,6 +24,32 @@ def kernel_smoothing(Kernel:Kernel, x_grid:np.ndarray, u_data:np.ndarray,
         u_smoothed (np.ndarray): Smoothed data
         multi_derivatives (np.ndarray): Estimated multi-derivatives
     """
+    n_grid = len(x_grid)
+    n_data = len(u_data)
+    n_alpha = len(alpha_list)
+
+    # Calculate the kernel matrix K using the provided kernel object
+    K = np.zeros((n_grid, n_data))
+    for i in range(n_grid):
+        for j in range(n_data):
+            K[i, j] = kernel(x_grid[i], u_data[j])
+
+    # Regularize and invert the kernel matrix
+    K_reg = K + nugget * np.eye(n_grid)
+
+    # Compute smoothed values u_smoothed using the regularized kernel matrix
+    u_smoothed = np.dot(K_reg, u_data)
+
+    # Initialize the array for multi-derivatives
+    multi_derivatives = np.zeros((n_data, n_grid, n_alpha))
+
+    # Compute multi-derivatives for each alpha in alpha_list
+    for idx, alpha in enumerate(alpha_list):
+        for i in range(n_grid):
+            for j in range(n_data):
+                multi_derivatives[j, i, idx] = kernel.multiDerivative(x_grid[i], u_data[j], alpha)
+
+    return u_smoothed, multi_derivatives
 
     raise NotImplementedError("kernel_smoothing not implemented")
 
