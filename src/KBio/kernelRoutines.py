@@ -51,7 +51,7 @@ def kernel_smoothing(Kernel:Kernel, x_grid:np.ndarray, u_data:np.ndarray,
 
     return u_smoothed, multi_derivatives
 
-    raise NotImplementedError("kernel_smoothing not implemented")
+    #raise NotImplementedError("kernel_smoothing not implemented")
 
 
 def assemble_features(u_smoothed, multi_derivatives, function_list)-> np.ndarray:
@@ -93,7 +93,7 @@ def assemble_features(u_smoothed, multi_derivatives, function_list)-> np.ndarray
 
     return features
 
-    raise NotImplementedError("assemble_features not implemented")
+    #raise NotImplementedError("assemble_features not implemented")
 
 
 def learn_DE_form(kernel:Kernel, s_features:np.ndarray, f_labels:np.ndarray, nugget:float) -> function:
@@ -107,9 +107,31 @@ def learn_DE_form(kernel:Kernel, s_features:np.ndarray, f_labels:np.ndarray, nug
         s_features (np.ndarray): _description_
         f_labels (np.ndarray): _description_
         nugget (float): _description_
+	Returns:
+        function: A function that takes new data points and returns predicted values.
     """
+    
+    # Calculate the kernel matrix from the features using the provided kernel object
+    K = kernel.matrix(s_features)
 
-    raise NotImplementedError("learn_operator not implemented")
+    # Regularize the kernel matrix
+    K += nugget * np.eye(K.shape[0])
+
+    # Solve for the weights in the kernel space
+    # Weights here are alpha in the ridge regression formula: (K + nugget*I)^-1 * Y
+    weights = np.linalg.solve(K, f_labels)
+
+    # Return a function that can use these weights to make predictions with new data
+    def predictor(new_features):
+        # Compute the kernel between the new features and the training features
+        k_new = np.array([kernel(new_feature, feature) for new_feature in new_features for feature in s_features]).reshape(len(new_features), len(s_features))
+        
+        # Return the predicted values
+        return k_new @ weights
+
+    return predictor
+
+    #raise NotImplementedError("learn_operator not implemented")
 
 
 def kernelized_DE_fit(kernel:Kernel, DE_operator:function, u_data:np.ndarray,
@@ -132,5 +154,26 @@ def kernelized_DE_fit(kernel:Kernel, DE_operator:function, u_data:np.ndarray,
     Returns:
         np.ndarray: Solution weights for the kernelized operator.
     """
+        # Number of data points
+    n_data = len(u_data)
 
-    raise NotImplementedError("kernelized_DE_fit not implemented")
+    # Compute the kernel matrix using the provided kernel
+    K = np.zeros((n_data, n_data))
+    for i in range(n_data):
+        for j in range(n_data):
+            K[i, j] = kernel(u_data[i], u_data[j])
+
+    # Regularize the kernel matrix
+    K += nugget_f * np.eye(n_data)
+
+    # Compute operator values for each data point using the DE_operator
+    operator_values = np.array([DE_operator(u) for u in u_data])
+
+    # Solve the system to find weights that map operator values to output data
+    # Here we assume that the DE operator directly gives us a form that can be used with the kernel matrix
+    weights = np.linalg.solve(K, f_data - operator_values)
+
+    return weights
+
+
+    #raise NotImplementedError("kernelized_DE_fit not implemented")
