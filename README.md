@@ -1,8 +1,9 @@
 # KernelPDEforBioProject
+
 Using Kernel methods to find smooth patterns in Stochastic Biological Data
 
-
 ## Linters and Code Quality
+
 Run the following command to check for code quality and linting issues:
 
 ```bash
