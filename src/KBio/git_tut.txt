@@ -1,0 +1,12 @@
+Git setup:
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+git clone https://github.com/MKupperman/KernelPDEforBioProject.git
+
+git pull
+git push -u origin branch-main
+
+git status
+git add .
+git commit -m "Your commit message"
+git push
