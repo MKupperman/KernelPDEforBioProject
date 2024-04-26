@@ -69,7 +69,29 @@ def assemble_features(u_smoothed, multi_derivatives, function_list)-> np.ndarray
         u_smoothed (np.ndarray): smoothed solution data from kernel smoothing.
         multi_derivatives (ndarray): multi derivative data from kernel smoothing.
         function_list (list[function]): List of functions to generate features.
+    Returns:
+        np.ndarray: A 3D tensor of features, of shape (n_data, n_grid, n_features).
     """
+    # Extract dimensions
+    n_data, n_grid = u_smoothed.shape
+    n_features = len(function_list)
+
+    # Initialize the feature tensor
+    features = np.zeros((n_data, n_grid, n_features))
+
+    # Iterate over each function to generate features
+    for feature_index, func in enumerate(function_list):
+        # Apply the function across all data and grid points
+        for i in range(n_data):
+            for j in range(n_grid):
+                # Extract the smoothed value and its derivatives at the current point
+                u_val = u_smoothed[i, j]
+                derivatives_val = multi_derivatives[i, j]
+
+                # Compute the feature using the current function
+                features[i, j, feature_index] = func(u_val, derivatives_val)
+
+    return features
 
     raise NotImplementedError("assemble_features not implemented")
 
