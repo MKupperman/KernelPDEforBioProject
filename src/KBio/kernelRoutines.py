@@ -1,8 +1,10 @@
+from typing import Callable
+
 import numpy as np
-from kernels import Kernel
+from .kernels import Kernel
 
 
-def kernel_smoothing(Kernel:Kernel, x_grid:np.ndarray, u_data:np.ndarray,
+def kernel_smoothing(kernel:Kernel, x_grid:np.ndarray, u_data:np.ndarray,
                      f_data:np.ndarray, alpha_list:list[np.ndarray], nugget=1e-10) -> tuple[np.ndarray, np.ndarray]:
     """    Perform kernel smoothing on the data and estimate multi-derivatives.
 
@@ -13,7 +15,7 @@ def kernel_smoothing(Kernel:Kernel, x_grid:np.ndarray, u_data:np.ndarray,
     multi_derivatives is n_data x n_grid x n_alpha.
 
     Args:
-        kernel (Kernel): Kernel function to use
+        kernel (Kernel): The kernel function to use
         x_grid (np.ndarray): Grid points
         u_data (np.ndarray): Training data. Values of the solution at the grid points.
         f_data (np.ndarray): Training data. Output values f(x).
@@ -96,7 +98,7 @@ def assemble_features(u_smoothed, multi_derivatives, function_list)-> np.ndarray
     #raise NotImplementedError("assemble_features not implemented")
 
 
-def learn_DE_form(kernel:Kernel, s_features:np.ndarray, f_labels:np.ndarray, nugget:float) -> function:
+def learn_DE_form(kernel:Kernel, s_features:np.ndarray, f_labels:np.ndarray, nugget:float) -> Callable:
     """    Learn the operator from the features and labels.
 
     Use the kernel method to learn a representation of the operator. Return a function
@@ -110,7 +112,7 @@ def learn_DE_form(kernel:Kernel, s_features:np.ndarray, f_labels:np.ndarray, nug
 	Returns:
         function: A function that takes new data points and returns predicted values.
     """
-    
+
     # Calculate the kernel matrix from the features using the provided kernel object
     K = kernel.matrix(s_features)
 
@@ -125,7 +127,7 @@ def learn_DE_form(kernel:Kernel, s_features:np.ndarray, f_labels:np.ndarray, nug
     def predictor(new_features):
         # Compute the kernel between the new features and the training features
         k_new = np.array([kernel(new_feature, feature) for new_feature in new_features for feature in s_features]).reshape(len(new_features), len(s_features))
-        
+
         # Return the predicted values
         return k_new @ weights
 
@@ -134,7 +136,7 @@ def learn_DE_form(kernel:Kernel, s_features:np.ndarray, f_labels:np.ndarray, nug
     #raise NotImplementedError("learn_operator not implemented")
 
 
-def kernelized_DE_fit(kernel:Kernel, DE_operator:function, u_data:np.ndarray,
+def kernelized_DE_fit(kernel:Kernel, DE_operator:Callable, u_data:np.ndarray,
                       f_data:np.ndarray, nugget_f:float, nugget_boundary:float) -> np.ndarray:
     """    Fit a kernelized operator to the data.
 

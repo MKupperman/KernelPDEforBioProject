@@ -4,7 +4,7 @@ from numpy.typing import NDArray
 from abc import ABC, abstractmethod
 from scipy import stats as st
 
-# from .DataSimulators.SIS import SIS_sim
+from .simulators.SIS import SIS
 
 class Grid(ABC):
     def __init__(self) -> None:
@@ -147,5 +147,7 @@ class SIS_sim(DataSimulator):
         super().__init__()
 
     def __call__(self, grid, *args: Any, **kwds: Any) -> Any:
+        # Get a solution on grid.
+        y = SIS(*args, **kwds)
         y = "" # Placeholder
         return y
