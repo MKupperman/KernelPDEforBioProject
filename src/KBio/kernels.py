@@ -1,9 +1,10 @@
+from typing import Union
+
 import numpy as np
-from scipy.special import factorial, hermite
+from scipy.special import eval_hermite as hermite
 from itertools import product
 from abc import ABC, abstractmethod
-# import Hermite Hn function from scipy
-from scipy.special import eval_hermite as hermite
+from scipy.special import comb
 
 # Create an ABC for kernel functions. This is useful for creating a common interface for all kernel functions.
 
@@ -214,38 +215,22 @@ class Gaussian(Kernel):
         #         K[j, i] = K[i, j]
         return K
 
-    '''
-    def multiDerivative(self, x, y, alpha: list[int]):
-        Kxy = self.__call__(x, y)
-        if len(alpha) == 1 and alpha[0] == 1:
-            return self.gradientX(x, y)
-        elif len(alpha) == 2 and all(a == 1 for a in alpha):
-            factor = 1 / self.sigma ** 4
-            term1 = self.sigma ** 2 - np.sum((x - y) ** 2)
-            return factor * (x - y) ** 2 * Kxy + term1 * Kxy / self.sigma ** 2
-        else:
-            raise NotImplementedError("Higher order derivatives are not implemented")
-    '''
-    def multiDerivative(self, x, y, alpha: list[int]):
+    def multiDerivative(self, x, y, alpha: Union[list[int], np.ndarray]):
         n = sum(alpha)
+        Kxy = self(x, y)
         if n == 0:
-            return self.__call__(x, y)
-
-        Kxy = self.__call__(x, y)
-        factor = (-1 / self.sigma ** 2) ** n
-        derivatives = np.zeros_like(x)
+            return Kxy
+        # Now let's calculate the derivative as we know there is at least one
+        derivative = 1
 
         # Calculate each component's contribution
         for i, a in enumerate(alpha):
-            if a > 0:
-                Hn = hermite(a)  # Get the Hermite polynomial of order a
-                xi = (x[i] - y[i]) / self.sigma
-                derivatives[i] = Hn(xi) * np.exp(-xi ** 2 / 2)  # Evaluate the Hermite polynomial at xi
+            normalized_delta = (x[i] - y[i]) / self.sigma
+            derivative *= hermite(normalized_delta, a) / self.sigma ** a
 
-        # Combine all components
-        total_derivative = np.prod(derivatives)
-        return factor * total_derivative * Kxy
+        return derivative * Kxy
 
+        # TODO Move this to a test file
         '''
         gaussian_kernel = Gaussian(sigma=1.5)
         x = np.array([1.0, 2.0, 3.0])
