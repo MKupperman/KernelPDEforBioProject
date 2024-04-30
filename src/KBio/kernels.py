@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.special import comb
+from scipy.special import factorial, hermite
+from itertools import product
 from abc import ABC, abstractmethod
 
 # Create an ABC for kernel functions. This is useful for creating a common interface for all kernel functions.
@@ -170,6 +171,7 @@ class Gaussian(Kernel):
                 K[j, i] = K[i, j]
         return K
 
+    '''
     def multiDerivative(self, x, y, alpha: list[int]):
         Kxy = self.__call__(x, y)
         if len(alpha) == 1 and alpha[0] == 1:
@@ -180,6 +182,35 @@ class Gaussian(Kernel):
             return factor * (x - y) ** 2 * Kxy + term1 * Kxy / self.sigma ** 2
         else:
             raise NotImplementedError("Higher order derivatives are not implemented")
+    '''
+    def multiDerivative(self, x, y, alpha: list[int]):
+        n = sum(alpha)
+        if n == 0:
+            return self.__call__(x, y)
+        
+        Kxy = self.__call__(x, y)
+        factor = (-1 / self.sigma ** 2) ** n
+        derivatives = np.zeros_like(x)
+        
+        # Calculate each component's contribution
+        for i, a in enumerate(alpha):
+            if a > 0:
+                Hn = hermite(a)  # Get the Hermite polynomial of order a
+                xi = (x[i] - y[i]) / self.sigma
+                derivatives[i] = Hn(xi) * np.exp(-xi ** 2 / 2)  # Evaluate the Hermite polynomial at xi
+
+        # Combine all components
+        total_derivative = np.prod(derivatives)
+        return factor * total_derivative * Kxy
+
+        '''
+        gaussian_kernel = Gaussian(sigma=1.5)
+        x = np.array([1.0, 2.0, 3.0])
+        y = np.array([1.5, 2.5, 3.5])
+        alpha = [2, 1, 0]  # Second derivative w.r.t. the first component and first derivative w.r.t. the second component
+        result = gaussian_kernel.multiDerivative(x, y, alpha)
+        print("Derivative result:", result)
+        '''
 
 
 class Exponential(Kernel):
