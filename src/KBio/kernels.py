@@ -149,7 +149,8 @@ class Polynomial(Kernel):
         Given a vectors x and y, compute the alpha-partial derivative of the
         kernel function w.r.t x at the pair (x,y).
 
-        x is either a vector or a matrix of vectors. If x is a matrix, each column
+        x is either a vector or a matrix of vectors. If x is a matrix,
+        each column is operated on.
 
         Alpha is the order of derivatives
 
@@ -158,19 +159,30 @@ class Polynomial(Kernel):
             y (np.ndarray): input vector
             alpha (list[int]): order of derivatives
         """
+        print("alpha", alpha)
         alphas = np.asarray(alpha)
+        print("Alphas")
+        print(alphas)
+        print(alphas.shape)
+        if len(alphas.shape) == 1:
+            alphas = alphas.reshape(1, -1)
+            print("Reshaped alphas")
+            print(alphas.shape)
         if len(x.shape) == 1:
             x = x.reshape(1, -1)
+            print("Reshaped x")
         if len(y.shape) == 1:
+            print("Reshaped y")
             y = y.reshape(1, -1)
 
-        d = np.zeros(x.shape[0])
+        d = np.zeros(x.shape)
         for yn in y:
-            a = np.prod[np.power(yn, alphas)]
-            b = comb(self.degree, len(alphas))
+            a = np.prod(np.power(yn, alphas))
+            b = comb(self.degree, alphas.shape[0])
             for i, xn in enumerate(x):
-                d[i] = a * b (xn.T @ y + self.c)**(self.degree - len(alpha))
+                d[i] = a * b (np.dot(xn, y)+ self.c)**(self.degree - alphas.shape[0])
         # raise NotImplementedError("multiDerivative not implemented")
+        return d
 
 
 class Gaussian(Kernel):

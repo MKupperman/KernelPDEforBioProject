@@ -49,7 +49,7 @@ def kernel_smooth(f:Kernel, X, lam2):
 
     Cholesky_L = cholesky(K + lam2 * np.eye(n))
     U_sol = solve_triangular(Cholesky_L, (Cholesky_L.T).dot(X), lower=True)
-    return u_sol
+    return U_sol
 
 def GaussNewton(f_obj, f_jacobian, x0, tol):
     raise NotImplementedError("GaussNewton not implemented")

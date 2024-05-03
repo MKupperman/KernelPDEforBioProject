@@ -3,34 +3,23 @@ from typing import Union, Callable
 import numpy as np
 import matplotlib.pyplot as plt
 
-def sis_model(dt, S0, I0, beta, gamma, T):
+
+def SIS(dt, S0, I0, beta, gamma, T:Union[float, int], f:callable):
     N = S0 + I0  # Total population
     t = np.arange(0, T, dt)
-    S = np.zeros(len(t))
     I = np.zeros(len(t))
+    I[0] = I0 / N  # normalize from absolute to relative pop size
 
-    S[0] = S0
-    I[0] = I0
-
-    # Simulate the dynamics
-    for i in range(1, len(t)):
-        dS = (-beta * S[i-1] * I[i-1] + gamma * I[i-1]) * dt
-        dI = (beta * S[i-1] * I[i-1] - gamma * I[i-1]) * dt
-        S[i] = S[i-1] + dS
-        I[i] = I[i-1] + dI
-
-    return t, S, I
-
-def SIS(dt, S0, I0, beta, gamma,T:Union[float, int], f:callable):
-    N = S0 + I0  # Total population
-    t = np.arange(0, T, dt)
-    # dI/dt  = (beta * I * (1 - I / N) - gamma * I) + f
-    I = np.zeros(len(t))
-    I[0] = I0
     for i in range(1,len(t)):
-        dI = (beta * I[t-1] * (1 - I[t-1] / N) - gamma * I) + f(t[i-1])
+        dI = (beta * I[i-1] * (1 - I[i-1]) - gamma * I[i-1]) + f(t[i-1])
+        if dI + I[i-1] > 1:
+            print("Step size: ", dt)
+            print("Current time: ", t[i-1])
+            print("Current infected: ", I[i-1])
+            print("Current dI: ", dI)
+            raise Exception("Step size too large! Simulation unstable. Reduce dt.")
         I[i] = I[i-1] + dI
-    return I
+    return t, I
 
 
 def main():
@@ -43,7 +32,8 @@ def main():
     dt = 0.1  # Time step
 
     # Run simulation
-    t, S, I = sis_model(dt, S0, I0, beta, gamma, T)
+    t, I = SIS(dt, S0, I0, beta, gamma, T, lambda x: 0.0)
+    S = (S0 + I0) * np.ones(len(t)) - I  # conservation of population
 
     # Plot results
     plt.figure(figsize=(10, 6))
