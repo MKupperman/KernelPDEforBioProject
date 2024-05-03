@@ -32,6 +32,23 @@ def newton_kernel(f:Kernel, y, x0, tol, h=1):
             return x1
         x = x1
 
+def regularized_cholesky_solve(Kxx, Kxy, lam2):
+    """
+    Regularized Cholesky solve.
+
+    Args:
+        Kxx: Kernel matrix.
+        Kxy: Kernel vector.
+        lam2: Regularization parameter.
+
+    Returns:
+        Solution.
+    """
+    Cholesky_L = cholesky(Kxx + lam2 * np.eye(Kxx.shape[0]))
+    core_solve = solve_triangular(Cholesky_L, Kxy, lower=True)
+    U_sol = Kxy.dot(core_solve)
+    return U_sol
+
 def kernel_smooth(f:Kernel, X, lam2):
     """
     Kernel smoothing.

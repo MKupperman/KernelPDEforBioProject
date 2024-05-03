@@ -180,7 +180,9 @@ class Polynomial(Kernel):
             a = np.prod(np.power(yn, alphas))
             b = comb(self.degree, alphas.shape[0])
             for i, xn in enumerate(x):
-                d[i] = a * b (np.dot(xn, y)+ self.c)**(self.degree - alphas.shape[0])
+                dv = (a * b * (xn.dot(y.T)+ self.c)**(self.degree - alphas.shape[0]))
+                # dv.reshape(-1, 1)
+                d[i] = dv
         # raise NotImplementedError("multiDerivative not implemented")
         return d
 
