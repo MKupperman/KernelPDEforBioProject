@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Any, List
 
 import numpy as np
 from scipy.special import eval_hermite as hermite
@@ -68,7 +68,7 @@ class Kernel(ABC):
         return self.gradientX(y, x)
 
     @abstractmethod
-    def multiDerivative(self, x, y, alpha:list[int]):
+    def multiDerivative(self, x, y, alpha:List[int]):
         # Compute the alpha-partial derivative of the kernel function w.r.t x.
 
         # Use JAX here to implement this function, or do it analytically
@@ -89,7 +89,7 @@ class Linear(Kernel):
 
     def matrix(self, X):
         return np.dot(X, X.T)
-    def multiDerivative(self, x, y, alpha: list[int]):
+    def multiDerivative(self, x, y, alpha: List[int]):
 
         raise NotImplementedError("multiDerivative not implemented")
 
@@ -143,7 +143,7 @@ class Polynomial(Kernel):
     def matrix(self, X):
         return (np.dot(X, X.T) + 1) ** self.degree
 
-    def multiDerivative(self, x:np.ndarray, y:np.ndarray, alpha: list[int]):
+    def multiDerivative(self, x:np.ndarray, y:np.ndarray, alpha: List[int]):
         """Compute the alpha-partial derivative of the kernel function w.r.t x.
 
         Given a vectors x and y, compute the alpha-partial derivative of the
@@ -227,7 +227,7 @@ class Gaussian(Kernel):
         #         K[j, i] = K[i, j]
         return K
 
-    def multiDerivative(self, x, y, alpha: Union[list[int], np.ndarray]):
+    def multiDerivative(self, x, y, alpha: Union[List[int], np.ndarray]):
         n = sum(alpha)
         Kxy = self(x, y)
         if n == 0:
@@ -279,7 +279,7 @@ class Exponential(Kernel):
                 K[j,i] = K[i,j]
         return K
 
-    def multiDerivative(self, x, y, alpha: list[int]):
+    def multiDerivative(self, x, y, alpha: List[int]):
 
         raise NotImplementedError("multiDerivative not implemented")
 
@@ -311,7 +311,7 @@ class featureMapKernel(Kernel):
                 K[j,i] = K[i,j]
         return K
 
-    def multiDerivative(self, x, y, alpha: list[int]):
+    def multiDerivative(self, x, y, alpha: List[int]):
         # Use alpha_deriv_formula to compute the alpha-partial derivative of the kernel function w.r.t x.
         if sum(alpha) == 1:  # First-order derivative
             # Assuming alpha corresponds to the order of derivative w.r.t. each component.
