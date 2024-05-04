@@ -141,7 +141,7 @@ class Polynomial(Kernel):
         return self.degree * (np.dot(x, y) + self.c) ** (self.degree - 1) * x
 
     def matrix(self, X):
-        return (np.dot(X, X.T) + 1) ** self.degree
+        return (np.dot(X, X.T) + self.c) ** self.degree
 
     def multiDerivative(self, x:np.ndarray, y:np.ndarray, alpha: List[int]):
         """Compute the alpha-partial derivative of the kernel function w.r.t x.
@@ -159,31 +159,30 @@ class Polynomial(Kernel):
             y (np.ndarray): input vector
             alpha (list[int]): order of derivatives
         """
-        print("alpha", alpha)
+
         alphas = np.asarray(alpha)
-        print("Alphas")
-        print(alphas)
-        print(alphas.shape)
+
         if len(alphas.shape) == 1:
             alphas = alphas.reshape(1, -1)
-            print("Reshaped alphas")
-            print(alphas.shape)
         if len(x.shape) == 1:
             x = x.reshape(1, -1)
-            print("Reshaped x")
         if len(y.shape) == 1:
-            print("Reshaped y")
             y = y.reshape(1, -1)
 
-        d = np.zeros(x.shape)
-        for yn in y:
-            a = np.prod(np.power(yn, alphas))
-            b = comb(self.degree, alphas.shape[0])
-            for i, xn in enumerate(x):
-                dv = (a * b * (xn.dot(y.T)+ self.c)**(self.degree - alphas.shape[0]))
-                # dv.reshape(-1, 1)
-                d[i] = dv
-        # raise NotImplementedError("multiDerivative not implemented")
+        d = np.zeros((x.shape[0], y.shape[0]))
+        # Raise the y vector to the power of the alphas. Operate on each column
+        a = np.prod(np.power(y, alphas))
+        # Compute the combinatorial quantity
+        b = comb(self.degree, alphas.shape[0])
+        # Term c
+
+        for ix in range(x.shape[0]):
+            xpt = x[ix]
+            for iy in range(y.shape[0]):
+                ypt = y[iy]
+                # Compute x^T y at each pair of GRID POINTS
+                dv = (np.dot(xpt, ypt) + self.c) ** (self.degree - alphas.sum())
+                d[ix, iy] = b * a * dv.item()
         return d
 
 
@@ -194,7 +193,7 @@ class Gaussian(Kernel):
 
     def __call__(self, x, y):
         # filter on if x and y are vectors or matrices
-        return np.exp(-np.linalg.norm(x - y) ** 2 / (2 * self.sigma ** 2))
+        return np.exp(-1 * (np.linalg.norm(x - y) ** 2) / (2 * self.sigma ** 2))
 
     def __str__(self):
         return f'Gaussian with sigma {self.sigma}'
@@ -221,38 +220,53 @@ class Gaussian(Kernel):
     def matrix(self, X):
         # Check this:
         K = np.exp(-np.linalg.norm(X[:, None] - X[None, :], axis=2) ** 2 / (2 * self.sigma ** 2))
-        # n = len(X)
-        # K = np.zeros((n, n))
-        # for i in range(n):
-        #     for j in range(i, n):
-        #         K[i, j] = self.__call__(X[i], X[j])
-        #         K[j, i] = K[i, j]
+
         return K
 
-    def multiDerivative(self, x, y, alpha: Union[List[int], np.ndarray]):
-        n = sum(alpha)
-        Kxy = self(x, y)
-        if n == 0:
-            return Kxy
-        # Now let's calculate the derivative as we know there is at least one
-        derivative = 1
+    def multiDerivative(self, x:np.ndarray, y:np.ndarray,
+                        alpha: Union[List[int], np.ndarray]):
 
-        # Calculate each component's contribution
-        for i, a in enumerate(alpha):
-            normalized_delta = (x[i] - y[i]) / self.sigma
-            derivative *= hermite(normalized_delta, a) / self.sigma ** a
 
-        return derivative * Kxy
+        alphas = np.asarray(alpha)
 
-        # TODO Move this to a test file
-        '''
-        gaussian_kernel = Gaussian(sigma=1.5)
-        x = np.array([1.0, 2.0, 3.0])
-        y = np.array([1.5, 2.5, 3.5])
-        alpha = [2, 1, 0]  # Second derivative w.r.t. the first component and first derivative w.r.t. the second component
-        result = gaussian_kernel.multiDerivative(x, y, alpha)
-        print("Derivative result:", result)
-        '''
+        if len(alphas.shape) == 1:
+            alphas = alphas.reshape(1, -1)
+        if len(x.shape) == 1:
+            x = x.reshape(1, -1)
+        if len(y.shape) == 1:
+            y = y.reshape(1, -1)
+
+        d = np.zeros((x.shape[0], y.shape[0]))
+        # Raise the y vector to the power of the alphas. Operate on each column
+
+        # a = np.prod(np.power(y, alphas))
+        # # Compute the combinatorial quantity
+        # b = comb(self.degree, alphas.shape[0])
+        # Term c
+
+        for ix in range(x.shape[0]):
+            xpt = x[ix]
+            for iy in range(y.shape[0]):
+                ypt = y[iy]
+                # derivative = 0
+                Kxy = self.__call__(xpt, ypt)
+                if alphas[0] == 1:
+                    # print("Kxy", Kxy)
+                    pass
+                normalized_delta = (xpt - ypt) / self.sigma
+                derivative =  Kxy
+                if alphas[0] == 1:
+                    # print("X", derivative)
+                    pass
+                for i, a in enumerate(alphas):
+                    # print(a)
+                    derivative *= hermite(a, normalized_delta) / self.sigma ** a
+                    if a == 1:
+                        # print(a, xpt, ypt, Kxy, derivative, hermite(a, normalized_delta) / self.sigma ** a)
+                        pass
+
+                d[ix, iy] = derivative
+        return d
 
 
 class Exponential(Kernel):

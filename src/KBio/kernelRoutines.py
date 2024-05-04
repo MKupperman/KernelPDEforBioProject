@@ -5,7 +5,7 @@ from .kernels import Kernel
 from .optim import regularized_cholesky_solve
 
 def kernel_smoothing(kernel:Kernel, x_grid:np.ndarray, u_data:np.ndarray,
-                     f_data:np.ndarray, alpha_list:list[np.ndarray], nugget=1e-10) -> tuple[np.ndarray, np.ndarray]:
+                     f_data:np.ndarray, alpha_list:list[np.ndarray], nugget=1e-3) -> tuple[np.ndarray, np.ndarray]:
     """    Perform kernel smoothing on the data and estimate multi-derivatives.
 
 
@@ -29,45 +29,34 @@ def kernel_smoothing(kernel:Kernel, x_grid:np.ndarray, u_data:np.ndarray,
 
     if x_grid.ndim == 2:
         print("Reshaping x_grid in smoother")
-        x_grid.reshape(-1, 1)
+        x_grid = x_grid[:,:, np.newaxis]
+        print(x_grid.shape)
 
     n_grid_pts = x_grid.shape[-2]
     print("n_grid_pts: ",     n_grid_pts)
-    n_pts_per_grid = u_data.shape[-1]
-    print("n_pts_per_grid: ", n_pts_per_grid)
-    n_alpha = len(alpha_list)
 
-    # Calculate the kernel matrix K using the provided kernel object
-    K = np.zeros((n_grid_pts, n_grid_pts))
-    for i in range(n_grid_pts):
-        for j in range(n_grid_pts):
-            K[i, j] = kernel(x_grid[i], u_data[j])
+    # First, we calculate the kernel matrix for the grid points of the reference data
+    K = kernel.matrix(x_grid[0])
 
-    # Regularize and invert the kernel matrix
-    K_reg = K + nugget * np.eye(n_grid_pts)
+    # Solve the "Core" problem outside of the loop,
+    # e.g. z = (U(X,X) + lam2*I)^-1 * u(X)
+    z = regularized_cholesky_solve(K, u_data, lam2=nugget)
 
-    # Compute smoothed values u_smoothed using the regularized kernel matrix
-    u_smoothed = np.dot(K_reg, u_data)
-
-    # multi_derivatives_list = []
+    # Allocate space for the smoothed data
     u_derivatives_list = []
-    # Compute multi-derivatives for each alpha in alpha_list
-    # First, fix an alpha from the list of multi-derivatives.
-    for idx, alpha in enumerate(alpha_list):
+    kernel_derivatives_list = []
 
-        # Initialize the array for multi-derivatives
-        multi_derivatives = np.zeros(u_data.shape)
-        # multi_derivatives
-        for i in range(x_grid.shape[0]):
-            # Pass in a matrix of n_points_per_grid x point dimension and a vector of u values
-            us = kernel.multiDerivative(x_grid[i], u_data[i], alpha)
-            multi_derivatives[i,:] = us
-        u_derivatives_list.append(
-multi_derivatives @
-        )
+    for alpha in alpha_list:
+        # NOTE - if the grid we want to smooth onto is different than the training,
+        # provide a different x argument.
+        # We want (n_smoothing_in, n_reference_points) matrix shape derivative matrix
+        Ks = kernel.multiDerivative(x=x_grid[0], y=x_grid[0], alpha=alpha)
+        kernel_derivatives_list.append(Ks)
+        u_smoothed = Ks.dot(z)
+        u_derivatives_list.append(u_smoothed)
         # multi_derivatives_list.append(multi_derivatives)
 
-    return u_smoothed, multi_derivatives_list
+    return z, kernel_derivatives_list, u_derivatives_list
 
     #raise NotImplementedError("kernel_smoothing not implemented")
 

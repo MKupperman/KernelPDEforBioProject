@@ -71,7 +71,7 @@ class rectangular_grid(Grid):
 
         # Rework this for higher dimensions - flatten the grid tensors
         flat_grids = [grid.flatten() for grid in self.grid_tensors]
-        num_pts = np.product(self.n_pts)
+        num_pts = np.prod(self.n_pts)
         # Iterate over this many points
 
         for i in range(num_pts):
@@ -89,7 +89,7 @@ class rectangular_grid(Grid):
         assert self.grid_list is not None, "Grid is not defined yet. Please define it first by calling self.grid()."
 
         self.grid_list = []
-        for i in range(np.product(self.n_pts)):
+        for i in range(np.prod(self.n_pts)):
             # Select the i'th point in the grid
             self.grid_list.append(tuple(grid_tensor.flat[i] for grid_tensor in self.grid_tensors))
 

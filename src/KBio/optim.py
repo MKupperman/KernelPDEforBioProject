@@ -3,6 +3,7 @@
 #
 # Kernel optimization and root-finding algorithms.
 
+import matplotlib.pyplot as plt
 import numpy as np
 from .kernels import Kernel
 from scipy.linalg import cholesky, solve_triangular
@@ -32,7 +33,7 @@ def newton_kernel(f:Kernel, y, x0, tol, h=1):
             return x1
         x = x1
 
-def regularized_cholesky_solve(Kxx, Kxy, lam2):
+def regularized_cholesky_solve(Kxx, u_rhs, lam2):
     """
     Regularized Cholesky solve.
 
@@ -44,10 +45,16 @@ def regularized_cholesky_solve(Kxx, Kxy, lam2):
     Returns:
         Solution.
     """
+    assert lam2 > 0, "Regularization parameter 'lam2' must be positive."
+    evals = np.linalg.eigvals(Kxx)
+    plt.semilogx(np.real(evals), np.imag(evals), 'ok')
+    evals_nugget = np.linalg.eigvals(Kxx + lam2 * np.eye(Kxx.shape[0]))
+    plt.semilogx(np.real(evals_nugget), np.imag(evals_nugget), 'xr')
     Cholesky_L = cholesky(Kxx + lam2 * np.eye(Kxx.shape[0]))
-    core_solve = solve_triangular(Cholesky_L, Kxy, lower=True)
-    U_sol = Kxy.dot(core_solve)
-    return U_sol
+    solve_1 = solve_triangular(Cholesky_L, u_rhs.T, lower=True)
+    core_solve = solve_triangular(Cholesky_L.T, solve_1, lower=False)
+    # U_sol = Kxy.dot(core_solve)
+    return core_solve
 
 def kernel_smooth(f:Kernel, X, lam2):
     """
