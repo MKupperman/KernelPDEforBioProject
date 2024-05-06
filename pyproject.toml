@@ -18,3 +18,7 @@ pythonpath = [
 [tool.setuptools.packages.find]
 where = ["src/"]
 include = ["KBio"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

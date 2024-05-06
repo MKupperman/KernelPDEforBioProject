@@ -91,7 +91,8 @@ class rectangular_grid(Grid):
         self.grid_list = []
         for i in range(np.prod(self.n_pts)):
             # Select the i'th point in the grid
-            self.grid_list.append(tuple(grid_tensor.flat[i] for grid_tensor in self.grid_tensors))
+            t = tuple(grid_tensor.flat[i] for grid_tensor in self.grid_tensors)
+            self.grid_list.append(t)
 
     def _fill_value_store(self) -> None:
         """ Fill value_store with key-value pairs
@@ -105,7 +106,6 @@ class rectangular_grid(Grid):
     def fill_yvalues(self, function) -> None:
         """ Fill y_values with simulated data
         """
-        print(len(self.value_list))
         for point in self.grid_list:
             fx = function(point)
             self.value_list.append(fx)

@@ -58,10 +58,9 @@ def kernel_smoothing(kernel:Kernel, x_grid:np.ndarray, u_data:np.ndarray,
 
     return z, kernel_derivatives_list, u_derivatives_list
 
-    #raise NotImplementedError("kernel_smoothing not implemented")
 
-
-def assemble_features(u_smoothed, multi_derivatives, function_list)-> np.ndarray:
+def assemble_features(x_grid_list, u_smoothed, multi_derivatives, function_list,
+                      flatten=True)-> np.ndarray:
     """    Assemble the features for the optimization problem.
 
     Provide a list of lambda functions to generate the features.
@@ -76,31 +75,32 @@ def assemble_features(u_smoothed, multi_derivatives, function_list)-> np.ndarray
         u_smoothed (np.ndarray): smoothed solution data from kernel smoothing.
         multi_derivatives (ndarray): multi derivative data from kernel smoothing.
         function_list (list[function]): List of functions to generate features.
+            functions should have the call signature f(x, u, multi_derivatives), and return
+            a scalar.
     Returns:
         np.ndarray: A 3D tensor of features, of shape (n_data, n_grid, n_features).
     """
     # Extract dimensions
-    n_data, n_grid = u_smoothed.shape
-    n_features = len(function_list)
+    n_grid, n_data = u_smoothed.shape
+    n_derivatives = len(multi_derivatives) + 1
+    n_features = len(function_list) + len(x_grid_list[0]) + n_derivatives
 
     # Initialize the feature tensor
     features = np.zeros((n_data, n_grid, n_features))
+    # First, select which series we are going to use
+    for i in range(n_data):
+        # select the j'th grid point
+        for j in range(n_grid):
+            x = x_grid_list[j]
+            u_val = u_smoothed[j,i]
+            u_derivs = [uprime[j,i] for uprime in multi_derivatives]
+            f_list = [f(x, u_val, u_derivs) for f in function_list]
 
-    # Iterate over each function to generate features
-    for feature_index, func in enumerate(function_list):
-        # Apply the function across all data and grid points
-        for i in range(n_data):
-            for j in range(n_grid):
-                # Extract the smoothed value and its derivatives at the current point
-                u_val = u_smoothed[i, j]
-                derivatives_val = multi_derivatives[i, j]
-
-                # Compute the feature using the current function
-                features[i, j, feature_index] = func(u_val, derivatives_val)
-
-    return features
-
-    #raise NotImplementedError("assemble_features not implemented")
+            features[i,j,:] = np.hstack([np.asarray(x), np.asarray(u_val), np.asarray(u_derivs), np.asarray(f_list)])
+    if flatten:
+        return features.reshape(features.shape[0] * features.shape[1], features.shape[2])
+    else:
+        return features
 
 
 def learn_DE_form(kernel:Kernel, s_features:np.ndarray, f_labels:np.ndarray, nugget:float) -> Callable:
@@ -126,17 +126,37 @@ def learn_DE_form(kernel:Kernel, s_features:np.ndarray, f_labels:np.ndarray, nug
 
     # Solve for the weights in the kernel space
     # Weights here are alpha in the ridge regression formula: (K + nugget*I)^-1 * Y
+
+    # TODO Replace this with a cholesky solve
     weights = np.linalg.solve(K, f_labels)
 
     # Return a function that can use these weights to make predictions with new data
     def predictor(new_features):
+        """   Predict values using the learned operator.
+
+        Args:
+            new_features (np.ndarray): New data points to predict values for. Shape is (n_data_new, n_features).
+        """
         # Compute the kernel between the new features and the training features
-        k_new = np.array([kernel(new_feature, feature) for new_feature in new_features for feature in s_features]).reshape(len(new_features), len(s_features))
+        # Convert lists to numpy arrays
+        new_features_np = np.array(new_features)    # (n_data_new, n_features)
+        s_features_np = np.array(s_features)        # (n_data, n_features)
+
+
+        # Apply kernel function to each pair of new_feature and feature
+        # TODO Re-write this if/when it's vectorizable.
+        k_new = np.ones((new_features_np.shape[0], s_features_np.shape[0]))
+        for i in range(new_features_np.shape[0]):
+            for j in range(s_features_np.shape[0]):
+                k_new[i, j] = kernel(new_features_np[i], s_features_np[j])
+        print(k_new.shape, weights.shape)
+        # This is neat, but it's difficult to understand what's going on
+        # k_new = np.array([kernel(new_feature, feature) for new_feature in new_features for feature in s_features]).reshape(len(new_features), len(s_features))
 
         # Return the predicted values
-        return k_new @ weights
+        return k_new, k_new @ weights
 
-    return predictor
+    return predictor, weights
 
     #raise NotImplementedError("learn_operator not implemented")
 

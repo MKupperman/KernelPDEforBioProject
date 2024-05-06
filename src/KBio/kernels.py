@@ -74,6 +74,20 @@ class Kernel(ABC):
         # Use JAX here to implement this function, or do it analytically
         raise NotImplementedError("multiDerivative not implemented")
 
+    @abstractmethod
+    def matrix_factored(self, X, Y, n_components=100):
+        """ Compute a factorized version of the kernel matrix between X and Y.
+
+        Requires the true kernel matrix to be approximated by a low-rank matrix.
+        The kernel matrix is approximated as K = U @ V.T, where U and V are
+        matrices of shape (n_samples_{X or Y}, n_components). n_components
+        should be more than the rank of the kernel matrix for a viable reconstruction.
+
+
+
+        """
+        raise NotImplementedError("lowDimensionMatrix not implemented")
+
 class Linear(Kernel):
     def __call__(self, x, y):
         return np.dot(x, y)
@@ -193,7 +207,8 @@ class Gaussian(Kernel):
 
     def __call__(self, x, y):
         # filter on if x and y are vectors or matrices
-        return np.exp(-1 * (np.linalg.norm(x - y) ** 2) / (2 * self.sigma ** 2))
+        s = np.exp(-1 * (np.linalg.norm(x - y) ** 2) / (2 * self.sigma ** 2))
+        return s
 
     def __str__(self):
         return f'Gaussian with sigma {self.sigma}'
@@ -223,6 +238,15 @@ class Gaussian(Kernel):
 
         return K
 
+    def matrix_factored(self, X, Y, n_components=100):
+        # Compute a factorized version of the kernel matrix between X and Y.
+        # Requires the true kernel matrix to be approximated by a low-rank matrix.
+        # DOES NOT FORM the kernel matrix, but approximates it as K by K = U Sigma U^T
+
+        Q = np.random.randn(X.shape[0], n_components)
+
+
+
     def multiDerivative(self, x:np.ndarray, y:np.ndarray,
                         alpha: Union[List[int], np.ndarray]):
 
@@ -250,6 +274,7 @@ class Gaussian(Kernel):
                 ypt = y[iy]
                 # derivative = 0
                 Kxy = self.__call__(xpt, ypt)
+
                 if alphas[0] == 1:
                     # print("Kxy", Kxy)
                     pass
@@ -262,7 +287,7 @@ class Gaussian(Kernel):
                     # print(a)
                     derivative *= hermite(a, normalized_delta) / self.sigma ** a
                     if a == 1:
-                        # print(a, xpt, ypt, Kxy, derivative, hermite(a, normalized_delta) / self.sigma ** a)
+                        # print(xpt, ypt, Kxy, derivative, hermite(a, normalized_delta) / self.sigma ** a)
                         pass
 
                 d[ix, iy] = derivative

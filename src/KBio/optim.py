@@ -46,14 +46,11 @@ def regularized_cholesky_solve(Kxx, u_rhs, lam2):
         Solution.
     """
     assert lam2 > 0, "Regularization parameter 'lam2' must be positive."
-    evals = np.linalg.eigvals(Kxx)
-    plt.semilogx(np.real(evals), np.imag(evals), 'ok')
-    evals_nugget = np.linalg.eigvals(Kxx + lam2 * np.eye(Kxx.shape[0]))
-    plt.semilogx(np.real(evals_nugget), np.imag(evals_nugget), 'xr')
+
     Cholesky_L = cholesky(Kxx + lam2 * np.eye(Kxx.shape[0]))
     solve_1 = solve_triangular(Cholesky_L, u_rhs.T, lower=True)
     core_solve = solve_triangular(Cholesky_L.T, solve_1, lower=False)
-    # U_sol = Kxy.dot(core_solve)
+
     return core_solve
 
 def kernel_smooth(f:Kernel, X, lam2):
