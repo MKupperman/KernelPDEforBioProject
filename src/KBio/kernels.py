@@ -196,7 +196,7 @@ class Polynomial(Kernel):
                 ypt = y[iy]
                 # Compute x^T y at each pair of GRID POINTS
                 degree = self.degree - alphas.sum()
-                if degree >0:
+                if degree >=0:
                     dv = (np.dot(xpt, ypt) + self.c) ** (degree)
                     dv = dv.item()
                 else:
