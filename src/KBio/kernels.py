@@ -74,7 +74,7 @@ class Kernel(ABC):
         # Use JAX here to implement this function, or do it analytically
         raise NotImplementedError("multiDerivative not implemented")
 
-    @abstractmethod
+    # @abstractmethod
     def matrix_factored(self, X, Y, n_components=100):
         """ Compute a factorized version of the kernel matrix between X and Y.
 
@@ -285,7 +285,7 @@ class Gaussian(Kernel):
                     pass
                 for i, a in enumerate(alphas):
                     # print(a)
-                    derivative *= hermite(a, normalized_delta) / self.sigma ** a
+                    derivative *= hermite(a, normalized_delta) / (self.sigma ** a)
                     if a == 1:
                         # print(xpt, ypt, Kxy, derivative, hermite(a, normalized_delta) / self.sigma ** a)
                         pass
