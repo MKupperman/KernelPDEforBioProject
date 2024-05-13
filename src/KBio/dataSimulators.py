@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from scipy import stats as st
 
 from .simulators.SIS import SIS
+from .simulators.1D_Advection_Solver import solve_1d_advection
 
 class Grid(ABC):
     def __init__(self) -> None:
@@ -282,3 +283,51 @@ class SIS_sim(DataSimulator):
             ffun = lambda x: np.interp(x, t_nodes, np.asarray([forcing(t) for t in t_nodes]))
             grid.fill_forcing(ffun)
             grid.fill_yvalues(yfun)
+
+
+class Advection1D(Grid):
+    def __init__(self, dt, u0, c, T_final, forcing=None) -> None:
+        super().__init__()
+        self.dt = dt
+        self.u0 = u0
+        self.c = c
+        self.T_final = T_final
+        self.forcing = forcing
+
+    def simulate(self, grid: rectangular_grid, forcing=None, **kwds) -> None:
+        if "dt" not in kwds:
+            dt = self.dt
+        else:
+            dt = kwds["dt"]
+
+        if "u0" not in kwds:
+            u0 = self.u0
+        else:
+            u0 = kwds["u0"]
+
+        if "c" not in kwds:
+            c = self.c
+        else:
+            c = kwds["c"]
+
+        # Check that forcing is a callable
+        if forcing is not None:
+            assert callable(forcing), "forcing must be a callable object. A __call__ method must be available."
+
+        if forcing is None:
+            forcing = self.forcing
+
+        if "T_final" not in kwds:
+            T_final = self.T_final
+        else:
+            assert isinstance(T_final, (int, float)), "T_final must be an integer or float"
+            T_final = kwds["T_final"]
+        
+        # Get a solution on grid
+        t_nodes, u_nodes = solve_1d_advection(dt, u0, c, T_final, f=forcing)
+        
+        # Now interpolate the solution down onto the grid
+        ufun = lambda x: np.interp(x, t_nodes, u_nodes)
+        ffun = lambda x: np.interp(x, t_nodes, np.asarray([forcing(t) for t in t_nodes]) if forcing is not None else np.zeros_like(t_nodes))
+        grid.fill_forcing(ffun)
+        grid.fill_yvalues(ufun)
