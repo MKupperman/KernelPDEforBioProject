@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from scipy import stats as st
 
 from .simulators.SIS import SIS
-from .simulators.oneD_Advection_Solver import solve_1d_advection
+from .simulators.Advection1D_Solver import solve_1D_advection
 
 class Grid(ABC):
     def __init__(self) -> None:
