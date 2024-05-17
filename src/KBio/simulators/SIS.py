@@ -2,24 +2,50 @@ from typing import Union, Callable
 
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.integrate import solve_ivp
 
+
+def _SIS_ODE(t, y, beta, gamma, f):
+    I = y[0]
+    dI = beta * I * (1 - I) - gamma * I + f(t)
+    return [dI]
 
 def SIS(dt, S0, I0, beta, gamma, T:Union[float, int], f:callable):
     N = S0 + I0  # Total population
-    t = np.arange(0, T, dt)
-    I = np.zeros(len(t))
-    I[0] = I0 / N  # normalize from absolute to relative pop size
 
-    for i in range(1,len(t)):
-        dI = (beta * I[i-1] * (1 - I[i-1]) - gamma * I[i-1]) + f(t[i-1])
-        if dI + I[i-1] > 1:
-            print("Step size: ", dt)
-            print("Current time: ", t[i-1])
-            print("Current infected: ", I[i-1])
-            print("Current dI: ", dI)
-            raise Exception("Step size too large! Simulation unstable. Reduce dt.")
-        I[i] = I[i-1] + dI
+    # Initial conditions
+    I0 = I0 / N  # normalize from absolute to relative pop size
+    y0 = [I0]
+
+    # Time span
+    t_span = (0, T)
+    t_eval = np.arange(0, T, dt)
+
+    # Solve the ODE with dense output
+    sol = solve_ivp(_SIS_ODE, t_span, y0, args=(beta, gamma, f), dense_output=True)
+
+    # Evaluate the solution at specified time points
+    I = sol.sol(t_eval)[0]
+    t = t_eval
     return t, I
+
+
+# def SIS(dt, S0, I0, beta, gamma, T:Union[float, int], f:callable):
+#     N = S0 + I0  # Total population
+#     t = np.arange(0, T, dt)
+#     I = np.zeros(len(t))
+#     I[0] = I0 / N  # normalize from absolute to relative pop size
+
+#     for i in range(1,len(t)):
+#         dI = (beta * I[i-1] * (1 - I[i-1]) - gamma * I[i-1]) + f(t[i-1])
+#         if dI + I[i-1] > 1:
+#             print("Step size: ", dt)
+#             print("Current time: ", t[i-1])
+#             print("Current infected: ", I[i-1])
+#             print("Current dI: ", dI)
+#             raise Exception("Step size too large! Simulation unstable. Reduce dt.")
+#         I[i] = I[i-1] + dI
+#     return t, I
 
 
 def main():
