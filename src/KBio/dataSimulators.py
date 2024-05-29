@@ -1,8 +1,9 @@
-from typing import Any, Union
+from typing import Any, Union, Callable
 import numpy as np
 from numpy.typing import NDArray
 from abc import ABC, abstractmethod
 from scipy import stats as st
+from scipy.interpolate import RegularGridInterpolator
 
 from .simulators.SIS import SIS
 from .simulators.Advection1D_Solver import solve_1D_advection
@@ -285,49 +286,70 @@ class SIS_sim(DataSimulator):
             grid.fill_yvalues(yfun)
 
 
-class Advection1D(Grid):
-    def __init__(self, dt, u0, c, T_final, forcing=None) -> None:
-        super().__init__()
+class Advection1D_sim(DataSimulator):
+    def __init__(self, dt=1e-2, u0=1.0, c=1.0, T_final=1.0, forcing: callable = None,
+                 x_min=0, x_max=1, nx=100) -> None:
         self.dt = dt
         self.u0 = u0
         self.c = c
         self.T_final = T_final
         self.forcing = forcing
+        self.nx = nx
+        self.x_min = x_min
+        self.x_max = x_max
+        super().__init__()
 
-    def simulate(self, grid: rectangular_grid, forcing=None, **kwds) -> None:
+    def __call__(self, grid: Grid, forcing: callable = None, verbose=False, *args: Any, **kwds: Any) -> Any:
+        assert isinstance(grid, Grid), "grid must be an instance of Grid"
         if "dt" not in kwds:
             dt = self.dt
         else:
             dt = kwds["dt"]
-
         if "u0" not in kwds:
             u0 = self.u0
         else:
             u0 = kwds["u0"]
-
         if "c" not in kwds:
             c = self.c
         else:
             c = kwds["c"]
-
-        # Check that forcing is a callable
         if forcing is not None:
             assert callable(forcing), "forcing must be a callable object. A __call__ method must be available."
-
         if forcing is None:
             forcing = self.forcing
-
         if "T_final" not in kwds:
             T_final = self.T_final
         else:
             assert isinstance(T_final, (int, float)), "T_final must be an integer or float"
             T_final = kwds["T_final"]
-        
-        # Get a solution on grid
-        t_nodes, u_nodes = solve_1d_advection(dt, u0, c, T_final, f=forcing)
-        
-        # Now interpolate the solution down onto the grid
-        ufun = lambda x: np.interp(x, t_nodes, u_nodes)
-        ffun = lambda x: np.interp(x, t_nodes, np.asarray([forcing(t) for t in t_nodes]) if forcing is not None else np.zeros_like(t_nodes))
+        if verbose:
+            print("Simulating data using the 1D advection model...")
+        x_grid = np.linspace(self.x_min, self.x_max, self.nx)
+        t_nodes, u_nodes = solve_1D_advection(x_min=self.x_min, x_max=self.x_max, dt=dt,
+                                              u0=u0, c=c, T_final=T_final, forcing=forcing,
+                                              nx=self.nx)
+        print(t_nodes.shape)
+        print(u_nodes.shape)
+        if verbose:
+            print(f"Simulated data on grid of shape {t_nodes.shape}")
+
+        def ffun(xpt):
+            t, x = xpt
+            if forcing is not None:
+                return forcing(t, x)
+            else:
+                return 0
+            # gridT, gridX = np.meshgrid(t_nodes, x_grid)
+            # Compute the forcing at the point xpt
+
+        interp_u = RegularGridInterpolator((t_nodes, x_grid), u_nodes)
+        def ufun(xpt):
+            t, x = xpt
+            return interp_u((t, x))
+            # gridT, gridX = np.meshgrid(t_nodes, x_grid)
+            # return griddata((gridT.flatten(), gridX.flatten()), u_nodes.flatten(), (t, x), method='linear')
+
         grid.fill_forcing(ffun)
         grid.fill_yvalues(ufun)
+
+        return t_nodes, u_nodes, ffun, ufun
