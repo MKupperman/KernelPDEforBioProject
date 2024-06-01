@@ -1,10 +1,34 @@
+from functools import partial
+
 import math
 
 import numpy as np
 from clawpack import riemann
 import matplotlib.pyplot as plt
 
-def setup(u0, x_min=0.0, x_max=1.0, nx=100, kernel_language='Python', use_petsc=False,
+# source/sink function should be of this form
+# def f(x, q):
+#     """
+#     Source term function ψ given by f(x, q) = 1 + x/2.
+#     """
+#     return 1 + x/2
+
+def step_source(solver, state, dt, f):
+    """
+    Step source function to integrate the source term over a time step.
+    """
+    q = state.q[0, :]
+    x = state.grid.x.centers
+    source_term = f(x, q)
+    state.q[0, :] += dt * source_term
+
+def auxinit(state, ux):
+    # Initialize petsc Structures for aux
+    # ux must be vectorized.
+    xc=state.grid.x.centers
+    state.aux[0,:] = ux(xc)
+
+def setup(u0, ux, forcing, x_min=0.0, x_max=1.0, nx=100, kernel_language='Python', use_petsc=False,
           solver_type='classic', weno_order=5, T_final=1.0,
           time_integrator='SSP104', outdir='./_output'):
 
@@ -15,40 +39,40 @@ def setup(u0, x_min=0.0, x_max=1.0, nx=100, kernel_language='Python', use_petsc=
     else:
         from clawpack import pyclaw
 
-    if kernel_language == 'Fortran':
-        riemann_solver = riemann.advection_1D
-    elif kernel_language == 'Python':
-        riemann_solver = riemann.advection_1D_py.advection_1D
-
     if solver_type=='classic':
-        solver = pyclaw.ClawSolver1D(riemann_solver)
+        if kernel_language == 'Fortran':
+            solver = pyclaw.ClawSolver1D(riemann.advection_color_1D)
+        elif kernel_language=='Python':
+            solver = pyclaw.ClawSolver1D(riemann.vc_advection_1D_py.vc_advection_1D)
     elif solver_type=='sharpclaw':
-        solver = pyclaw.SharpClawSolver1D(riemann_solver)
-        solver.weno_order = weno_order
-        solver.time_integrator = time_integrator
-        if time_integrator == 'SSPLMMk3':
-            solver.lmm_steps = 5
-            solver.check_lmm_cond = True
-    else:
-        raise Exception('Unrecognized value of solver_type.')
+        if kernel_language == 'Fortran':
+            solver = pyclaw.SharpClawSolver1D(riemann.advection_color_1D)
+        elif kernel_language=='Python':
+            solver = pyclaw.SharpClawSolver1D(riemann.vc_advection_1D_py.vc_advection_1D)
+        solver.weno_order=weno_order
+    else: raise Exception('Unrecognized value of solver_type.')
+
 
     solver.kernel_language = kernel_language
-
+    solver.step_source = partial(lambda solver, state, dt: step_source(solver, state, dt, forcing))
     # Set the boundary conditions
     solver.bc_lower[0] = pyclaw.BC.periodic
     solver.bc_upper[0] = pyclaw.BC.periodic
+    solver.aux_bc_lower[0] = pyclaw.BC.periodic
+    solver.aux_bc_upper[0] = pyclaw.BC.periodic
 
     # Setup the domain
     x = pyclaw.Dimension(x_min, x_max, nx, name='x')
     domain = pyclaw.Domain(x)
-    state = pyclaw.State(domain, solver.num_eqn)
+    state = pyclaw.State(domain, solver.num_eqn, num_aux=1)
 
     # Set the advection velocity - we'll change this later
-    state.problem_data['u'] = 1.  # Advection velocity
+    # state.problem_data['u'] = 1  # Advection velocity
+
+    auxinit(state, ux=ux)
 
     # Initial data
-    xc = state.grid.x.centers
-    state.q[0, :] = u0
+    state.q[0, :] = u0(domain.grid.x.centers)
     # np.exp(-beta * (xc-x0)**2) * np.cos(gamma * (xc - x0))
 
     claw = pyclaw.Controller()
@@ -67,15 +91,20 @@ def setup(u0, x_min=0.0, x_max=1.0, nx=100, kernel_language='Python', use_petsc=
     return claw
 
 
-def solve_1D_advection(x_min, x_max, dt, u0, c, T_final, forcing=None, nx=100):
+def solve_1D_advection(x_min, x_max, dt, u0, ux, T_final, forcing, nx=100, pyvis=False):
     from clawpack.pyclaw.util import run_app_from_main
-    claw = setup(x_min=x_min, x_max=x_max, nx=nx, outdir=None, u0=u0, T_final=T_final)
+    if pyvis == False:
+        outdir = None
+    else:
+        outdir = './_output'
+    claw = setup(u0=u0, x_min=x_min, x_max=x_max, nx=nx, outdir=outdir,
+                 ux=ux, T_final=T_final, forcing=forcing)
     claw.tfinal = T_final
 
-    if forcing is not None:
-        claw.solution.state.problem_data['forcing'] = forcing
+    # if forcing is not None:
+        # claw.solution.state.problem_data['forcing'] = forcing
 
-    claw.solution.state.q[0, :] = u0
+    # claw.solution.state.q[0, :] = u0
     claw.solver.dt_initial = dt
     claw.num_output_times = math.ceil(T_final / dt)  # Change the number of frames here
     claw.run()

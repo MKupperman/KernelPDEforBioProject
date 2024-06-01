@@ -255,15 +255,15 @@ class Gaussian(Kernel):
     def multiDerivative(self, x:np.ndarray, y:np.ndarray,
                         alpha: Union[List[int], np.ndarray]):
 
-
+        # flatten alphas
         alphas = np.asarray(alpha)
+        alphas = alphas.flatten()
 
-        if len(alphas.shape) == 1:
-            alphas = alphas.reshape(1, -1)
-        if len(x.shape) == 1:
-            x = x.reshape(1, -1)
-        if len(y.shape) == 1:
-            y = y.reshape(1, -1)
+        x = np.array(x, dtype=float)
+        x = x.flatten()
+
+        y = np.array(y, dtype=float)
+        y = y.flatten()
 
         d = np.zeros((x.shape[0], y.shape[0]))
         # Raise the y vector to the power of the alphas. Operate on each column
@@ -280,21 +280,10 @@ class Gaussian(Kernel):
                 # derivative = 0
                 Kxy = self.__call__(xpt, ypt)
 
-                if alphas[0] == 1:
-                    # print("Kxy", Kxy)
-                    pass
                 normalized_delta = (xpt - ypt) / self.sigma
                 derivative =  Kxy
-                if alphas[0] == 1:
-                    # print("X", derivative)
-                    pass
                 for i, a in enumerate(alphas):
-                    # print(a)
                     derivative *= hermite(a, normalized_delta) / (self.sigma ** a)
-                    if a == 1:
-                        # print(xpt, ypt, Kxy, derivative, hermite(a, normalized_delta) / self.sigma ** a)
-                        pass
-
                 d[ix, iy] = derivative
         return d
 

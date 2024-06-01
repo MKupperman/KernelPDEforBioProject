@@ -112,7 +112,7 @@ class rectangular_grid(Grid):
             fx = function(point)
             self.value_list.append(fx)
             self.value_store[point] = fx
-        self.grid_tensors_values = np.asarray(self.value_list).reshape(self.n_pts)
+        self.grid_tensors_values = np.asarray(self.value_list).reshape(self.n_pts, order='F')
 
 
 
@@ -287,19 +287,20 @@ class SIS_sim(DataSimulator):
 
 
 class Advection1D_sim(DataSimulator):
-    def __init__(self, dt=1e-2, u0=1.0, c=1.0, T_final=1.0, forcing: callable = None,
+    def __init__(self, dt=1e-2, u0=lambda x: 1, ux = lambda x: 1,
+                 T_final=1.0, forcing: callable = None,
                  x_min=0, x_max=1, nx=100) -> None:
         self.dt = dt
-        self.u0 = u0
-        self.c = c
+        self.u0 = u0  # initial condition of the solution
+        self.ux = ux  # velocity field over the domain.
         self.T_final = T_final
-        self.forcing = forcing
+        self.forcing = forcing  # source/sink forcing terms.
         self.nx = nx
         self.x_min = x_min
         self.x_max = x_max
         super().__init__()
 
-    def __call__(self, grid: Grid, forcing: callable = None, verbose=False, *args: Any, **kwds: Any) -> Any:
+    def __call__(self, grid: Grid, forcing: callable, verbose=False, *args: Any, **kwds: Any) -> Any:
         assert isinstance(grid, Grid), "grid must be an instance of Grid"
         if "dt" not in kwds:
             dt = self.dt
@@ -309,25 +310,32 @@ class Advection1D_sim(DataSimulator):
             u0 = self.u0
         else:
             u0 = kwds["u0"]
-        if "c" not in kwds:
-            c = self.c
+        if "ux" not in kwds:
+            ux = self.ux
         else:
-            c = kwds["c"]
-        if forcing is not None:
-            assert callable(forcing), "forcing must be a callable object. A __call__ method must be available."
+            ux = kwds["ux"]
         if forcing is None:
             forcing = self.forcing
+        if forcing is not None:
+            assert callable(forcing), "forcing must be a callable object. A __call__ method must be available."
         if "T_final" not in kwds:
             T_final = self.T_final
         else:
             assert isinstance(T_final, (int, float)), "T_final must be an integer or float"
             T_final = kwds["T_final"]
+
+        # check if we got a pyvis flag
+        if "pyvis" not in kwds:
+            pyvis = False
+        else:
+            pyvis = kwds["pyvis"]
+            assert isinstance(pyvis, bool), "pyvis must be a boolean"
         if verbose:
             print("Simulating data using the 1D advection model...")
         x_grid = np.linspace(self.x_min, self.x_max, self.nx)
         t_nodes, u_nodes = solve_1D_advection(x_min=self.x_min, x_max=self.x_max, dt=dt,
-                                              u0=u0, c=c, T_final=T_final, forcing=forcing,
-                                              nx=self.nx)
+                                              u0=u0, ux=ux, T_final=T_final, forcing=forcing,
+                                              nx=self.nx, pyvis=pyvis)
         print(t_nodes.shape)
         print(u_nodes.shape)
         if verbose:
@@ -346,10 +354,8 @@ class Advection1D_sim(DataSimulator):
         def ufun(xpt):
             t, x = xpt
             return interp_u((t, x))
-            # gridT, gridX = np.meshgrid(t_nodes, x_grid)
-            # return griddata((gridT.flatten(), gridX.flatten()), u_nodes.flatten(), (t, x), method='linear')
 
         grid.fill_forcing(ffun)
         grid.fill_yvalues(ufun)
 
-        return t_nodes, u_nodes, ffun, ufun
+        return t_nodes, x_grid, u_nodes, ffun, ufun
