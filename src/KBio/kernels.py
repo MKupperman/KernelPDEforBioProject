@@ -259,13 +259,14 @@ class Gaussian(Kernel):
         alphas = np.asarray(alpha)
         alphas = alphas.flatten()
 
-        x = np.array(x, dtype=float)
-        x = x.flatten()
+        # x = np.array(x, dtype=float)
+        # x = x.flatten()
 
-        y = np.array(y, dtype=float)
-        y = y.flatten()
+        # y = np.array(y, dtype=float)
+        # y = y.flatten()
 
         d = np.zeros((x.shape[0], y.shape[0]))
+
         # Raise the y vector to the power of the alphas. Operate on each column
 
         # a = np.prod(np.power(y, alphas))
@@ -283,7 +284,7 @@ class Gaussian(Kernel):
                 normalized_delta = (xpt - ypt) / self.sigma
                 derivative =  Kxy
                 for i, a in enumerate(alphas):
-                    derivative *= hermite(a, normalized_delta) / (self.sigma ** a)
+                    derivative = derivative * hermite(a, normalized_delta[i]) / (self.sigma ** a)
                 d[ix, iy] = derivative
         return d
 

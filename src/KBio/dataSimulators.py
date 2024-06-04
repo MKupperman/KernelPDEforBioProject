@@ -309,6 +309,7 @@ class Advection1D_sim(DataSimulator):
         if "u0" not in kwds:
             u0 = self.u0
         else:
+            print("Using custom u0")
             u0 = kwds["u0"]
         if "ux" not in kwds:
             ux = self.ux

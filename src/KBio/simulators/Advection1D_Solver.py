@@ -19,7 +19,7 @@ def step_source(solver, state, dt, f):
     """
     q = state.q[0, :]
     x = state.grid.x.centers
-    source_term = f(x, q)
+    source_term = f(x=x, t=state.t)
     state.q[0, :] += dt * source_term
 
 def auxinit(state, ux):
